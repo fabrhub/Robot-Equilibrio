@@ -19,7 +19,7 @@ void setup() {
   pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
-  analogWrite(enA, 150);
+  analogWrite(enA, 150); //non vado al massimo
   analogWrite(enB, 150);
 
   Wire.begin();
