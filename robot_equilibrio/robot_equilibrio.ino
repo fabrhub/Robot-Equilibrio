@@ -12,7 +12,7 @@
 MPU6050 mpu6050(Wire);
 
 float SetpointPID, InputPID, OutputPID;
-float Kp = 10, Ki = 1, Kd = 1;
+float Kp = 5, Ki = 0.2, Kd = 0.1;
 bool fallDirection; //true-avanti, false-dietro
 
 QuickPID myQuickPID(&InputPID, &OutputPID, &SetpointPID, Kp, Ki, Kd, QuickPID::DIRECT);
@@ -43,7 +43,6 @@ void loop() {
   printStatus();
 }
 
-//---------------------------------------------------------------------------------------------------------
 
 void readValueFromSensor() {
   mpu6050.update();
@@ -60,28 +59,26 @@ void readValueFromSensor() {
 }
 
 void moveMotor(float OutputPID, bool fallDirection) {
+  analogWrite(enA, OutputPID);
+  analogWrite(enB, OutputPID);
   if (fallDirection == true) {
     digitalWrite(IN1, LOW);
     digitalWrite(IN2, HIGH);
     digitalWrite(IN3, LOW);
     digitalWrite(IN4, HIGH);
-    analogWrite(enA, OutputPID); //scrivilo solo una volta
-    analogWrite(enB, OutputPID);
   } else {
     digitalWrite(IN1, HIGH);
     digitalWrite(IN2, LOW);
     digitalWrite(IN3, HIGH);
     digitalWrite(IN4, LOW);
-    analogWrite(enA, OutputPID);
-    analogWrite(enB, OutputPID);
   }
 }
 
 void printStatus() {
-  //Serial.println(fallDirection);
   Serial.print("InputPID:");
   Serial.print(InputPID);
   Serial.print(",OutputPID:");
   Serial.print(OutputPID);
-  Serial.println();
+  Serial.print(",SetpointPID:");
+  Serial.println(SetpointPID);
 }
