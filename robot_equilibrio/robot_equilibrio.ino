@@ -1,3 +1,4 @@
+#include <QuickPID.h>
 #include <MPU6050_tockn.h>
 #include <Wire.h>
 
@@ -10,6 +11,12 @@
 
 MPU6050 mpu6050(Wire);
 
+float SetpointPID, InputPID, OutputPID;
+float Kp = 10, Ki = 1, Kd = 1;
+bool fallDirection; //true-avanti, false-dietro
+
+QuickPID myQuickPID(&InputPID, &OutputPID, &SetpointPID, Kp, Ki, Kd, QuickPID::DIRECT);
+
 void setup() {
   Serial.begin(9600);
 
@@ -19,44 +26,62 @@ void setup() {
   pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
-  analogWrite(enA, 150); //non vado al massimo
-  analogWrite(enB, 150);
 
   Wire.begin();
   mpu6050.begin();
-  mpu6050.calcGyroOffsets(true); //calibrazione
+  mpu6050.calcGyroOffsets(); //calibrazione (metti true come parametro se vuoi stampare lo stato)
+
+  SetpointPID = 0; //obiettivo target - equilibrio
+  myQuickPID.SetMode(QuickPID::AUTOMATIC);
+
 }
 
 void loop() {
-  mpu6050.update();
-  Serial.println(mpu6050.getAngleY());
-  correzioneEquilibrio(mpu6050.getAngleY());
+  readValueFromSensor();
+  myQuickPID.Compute();
+  moveMotor(OutputPID, fallDirection);
+  printStatus();
 }
 
-//-------
+//---------------------------------------------------------------------------------------------------------
 
-void correzioneEquilibrio(float angolo) {
-  if (angolo > 7) {
+void readValueFromSensor() {
+  mpu6050.update();
+  InputPID = mpu6050.getAngleY();
+  if (InputPID > 0) {
+    //caduta in avanti
+    fallDirection = true;
+    myQuickPID.SetControllerDirection(QuickPID::REVERSE);
+  } else if (InputPID < 0) {
+    //caduta in dietro
+    fallDirection = false;
+    myQuickPID.SetControllerDirection(QuickPID::DIRECT);
+  }
+}
+
+void moveMotor(float OutputPID, bool fallDirection) {
+  if (fallDirection == true) {
     digitalWrite(IN1, LOW);
     digitalWrite(IN2, HIGH);
     digitalWrite(IN3, LOW);
     digitalWrite(IN4, HIGH);
-    delay(200);
-    brake();
-  } else if (angolo < -7) {
+    analogWrite(enA, OutputPID); //scrivilo solo una volta
+    analogWrite(enB, OutputPID);
+  } else {
     digitalWrite(IN1, HIGH);
     digitalWrite(IN2, LOW);
     digitalWrite(IN3, HIGH);
     digitalWrite(IN4, LOW);
-    delay(200);
-    brake();
+    analogWrite(enA, OutputPID);
+    analogWrite(enB, OutputPID);
   }
 }
 
-void brake()
-{
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, LOW);
-  digitalWrite(IN3, LOW);
-  digitalWrite(IN4, LOW);
+void printStatus() {
+  //Serial.println(fallDirection);
+  Serial.print("InputPID:");
+  Serial.print(InputPID);
+  Serial.print(",OutputPID:");
+  Serial.print(OutputPID);
+  Serial.println();
 }
