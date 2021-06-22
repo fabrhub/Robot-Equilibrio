@@ -31,7 +31,7 @@ void setup() {
   mpu6050.begin();
   mpu6050.calcGyroOffsets(true); //calibrazione (metti true come parametro se vuoi stampare lo stato)
 
-  SetpointPID = 0; //obiettivo target -> punto di equilibrio
+  SetpointPID = -0.8; //obiettivo target -> punto di equilibrio da cambiare in base al sensore, valore intorno allo 0
   myPID.SetMode(AUTOMATIC);
 
 }
@@ -47,18 +47,18 @@ void loop() {
 void readValueFromSensor() {
   mpu6050.update();
   InputPID = mpu6050.getAngleY();
-  if (InputPID > 0) {
+  if (InputPID > SetpointPID) {
     //caduta in avanti
     fallDirection = true;
     myPID.SetControllerDirection(REVERSE);
-  } else if (InputPID < 0) {
+  } else if (InputPID < SetpointPID) {
     //caduta in dietro
     fallDirection = false;
     myPID.SetControllerDirection(DIRECT);
   }
 }
 
-void moveMotor(float OutputPID, bool fallDirection) {
+void moveMotor(double OutputPID, bool fallDirection) {
   analogWrite(enA, OutputPID);
   analogWrite(enB, OutputPID);
   if (fallDirection == true) {
