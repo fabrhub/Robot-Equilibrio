@@ -12,8 +12,11 @@
 MPU6050 mpu6050(Wire);
 
 float SetpointPID, InputPID, OutputPID;
-float Kp = 10, Ki = 0.2, Kd = 0.1;
+float Kp = 10, Ki = 0.1, Kd = 100;
+
+float sensorValue;
 bool fallDirection; //true-avanti, false-dietro
+float speedMot1, speedMot2; //valore PWM senza deadzone
 
 QuickPID myQuickPID(&InputPID, &OutputPID, &SetpointPID, Kp, Ki, Kd, QuickPID::DIRECT);
 
@@ -29,7 +32,8 @@ void setup() {
 
   Wire.begin();
   mpu6050.begin();
-  mpu6050.calcGyroOffsets(); //calibrazione (metti true come parametro se vuoi stampare lo stato)
+  mpu6050.calcGyroOffsets(true); //calibrazione automatica (metti true come parametro se vuoi stampare lo stato)
+  //mpu6050.setGyroOffsets(0.00, -1.43, 0.00); //aggiusta offset asse Y manualmente, ci sono problemi con la calibrazione automatica
 
   SetpointPID = 0; //obiettivo target - equilibrio
   myQuickPID.SetMode(QuickPID::AUTOMATIC);
@@ -39,28 +43,43 @@ void setup() {
 void loop() {
   readValueFromSensor();
   myQuickPID.Compute();
-  moveMotor(OutputPID, fallDirection);
+  removeMotorDeadZone(OutputPID);
+  moveMotors(speedMot1, speedMot2, fallDirection);
   printStatus();
 }
 
 
 void readValueFromSensor() {
   mpu6050.update();
-  InputPID = mpu6050.getAngleY();
-  if (InputPID > 0) {
+  sensorValue = mpu6050.getAngleY();
+  if (sensorValue > 2.5) { //togliere roba hard coded, questo è una tolleranza dei valori letti dal sensore
     //caduta in avanti
+    InputPID = sensorValue;
     fallDirection = true;
     myQuickPID.SetControllerDirection(QuickPID::REVERSE);
-  } else if (InputPID < 0) {
+  } else if (sensorValue < -2.5) {
     //caduta in dietro
+    InputPID = sensorValue;
     fallDirection = false;
     myQuickPID.SetControllerDirection(QuickPID::DIRECT);
+  } else {
+    InputPID = 0;
   }
 }
 
-void moveMotor(float OutputPID, bool fallDirection) {
-  analogWrite(enA, OutputPID);
-  analogWrite(enB, OutputPID);
+void removeMotorDeadZone(float OutputPID) {
+  if (OutputPID == 0) {
+    speedMot1 = 0;
+    speedMot2 = 0;
+  } else {
+    speedMot1 = map(OutputPID, 1, 255, 60, 255); //60 soglia di attivazione motore1
+    speedMot2 = map(OutputPID, 1, 255, 90, 255); //90 soglia di attivazione motore2
+  }
+}
+
+void moveMotors(float speedMot1, float speedMot2, bool fallDirection) {
+  analogWrite(enA, speedMot1);
+  analogWrite(enB, speedMot2);
   if (fallDirection == true) {
     digitalWrite(IN1, LOW);
     digitalWrite(IN2, HIGH);
@@ -79,6 +98,12 @@ void printStatus() {
   Serial.print(InputPID);
   Serial.print(",OutputPID:");
   Serial.print(OutputPID);
+  Serial.print(",speedMot1:");
+  Serial.print(speedMot1);
+  Serial.print(",speedMot2:");
+  Serial.print(speedMot2);
+  Serial.print(",sensorValue:");
+  Serial.print(sensorValue);
   Serial.print(",SetpointPID:");
   Serial.println(SetpointPID);
 }
