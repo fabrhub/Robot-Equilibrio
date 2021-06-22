@@ -31,7 +31,7 @@ void setup() {
   mpu6050.begin();
   mpu6050.calcGyroOffsets(); //calibrazione (metti true come parametro se vuoi stampare lo stato)
 
-  SetpointPID = 0; //obiettivo target - equilibrio
+  SetpointPID = 0; //obiettivo target -> punto di equilibrio
   myQuickPID.SetMode(QuickPID::AUTOMATIC);
 
 }
