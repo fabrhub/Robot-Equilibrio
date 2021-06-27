@@ -29,11 +29,12 @@ void setup() {
 
   Wire.begin();
   mpu6050.begin();
-  mpu6050.calcGyroOffsets(true); //calibrazione (metti true come parametro se vuoi stampare lo stato)
 
-  SetpointPID = -0.8; //obiettivo target -> punto di equilibrio da cambiare in base al sensore, valore intorno allo 0
+  calibrazioneSensore();
+  //mpu6050.calcGyroOffsets(true); //calibrazione (metti true come parametro se vuoi stampare lo stato)
+  //SetpointPID = 0; //obiettivo target -> punto di equilibrio da cambiare in base al sensore, valore intorno allo 0
+  
   myPID.SetMode(AUTOMATIC);
-
 }
 
 void loop() {
@@ -43,6 +44,18 @@ void loop() {
   printStatus();
 }
 
+void calibrazioneSensore(){
+  Serial.println("Calibrazione, NON MUOVERE IL ROBOT");
+  float somma = 0;
+  for(int i=0; i<500; i++){
+    mpu6050.update();
+    somma += mpu6050.getAngleY();
+    Serial.println(mpu6050.getAngleY());
+    delay(50); //importante
+  }
+  SetpointPID = somma/500;
+  Serial.println("Calibrazione finita, target impostato.");
+}
 
 void readValueFromSensor() {
   mpu6050.update();
