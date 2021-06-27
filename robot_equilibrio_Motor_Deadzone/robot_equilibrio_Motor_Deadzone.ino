@@ -9,6 +9,9 @@
 #define IN3 6
 #define IN4 7
 
+#define SOGLIA_MOTORE1 60 //da cambiare in base ai motori
+#define SOGLIA_MOTORE2 90 //da cambiare in base ai motori
+
 MPU6050 mpu6050(Wire);
 
 float SetpointPID, InputPID, OutputPID;
@@ -33,9 +36,9 @@ void setup() {
   Wire.begin();
   mpu6050.begin();
   mpu6050.calcGyroOffsets(true); //calibrazione automatica (metti true come parametro se vuoi stampare lo stato)
-  //mpu6050.setGyroOffsets(0.00, -1.43, 0.00); //aggiusta offset asse Y manualmente, ci sono problemi con la calibrazione automatica
+  //mpu6050.setGyroOffsets(0.00, -1.43, 0.00); //aggiusta offset asse Y manualmente,se ci sono problemi con la calibrazione automatica
 
-  SetpointPID = 0; //obiettivo target - equilibrio
+  SetpointPID = 0; //obiettivo target --> punto di equilibrio
   myQuickPID.SetMode(QuickPID::AUTOMATIC);
 
 }
@@ -52,12 +55,12 @@ void loop() {
 void readValueFromSensor() {
   mpu6050.update();
   sensorValue = mpu6050.getAngleY();
-  if (sensorValue > 2.5) { //togliere roba hard coded, questo è una tolleranza dei valori letti dal sensore
+  if (sensorValue > SetpointPID) { 
     //caduta in avanti
     InputPID = sensorValue;
     fallDirection = true;
     myQuickPID.SetControllerDirection(QuickPID::REVERSE);
-  } else if (sensorValue < -2.5) {
+  } else if (sensorValue < SetpointPID) {
     //caduta in dietro
     InputPID = sensorValue;
     fallDirection = false;
@@ -72,8 +75,8 @@ void removeMotorDeadZone(float OutputPID) {
     speedMot1 = 0;
     speedMot2 = 0;
   } else {
-    speedMot1 = map(OutputPID, 1, 255, 60, 255); //60 soglia di attivazione motore1
-    speedMot2 = map(OutputPID, 1, 255, 90, 255); //90 soglia di attivazione motore2
+    speedMot1 = map(OutputPID, 1, 255, SOGLIA_MOTORE1, 255);
+    speedMot2 = map(OutputPID, 1, 255, SOGLIA_MOTORE2, 255);
   }
 }
 

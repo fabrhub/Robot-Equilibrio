@@ -47,11 +47,11 @@ void loop() {
 void readValueFromSensor() {
   mpu6050.update();
   InputPID = mpu6050.getAngleY();
-  if (InputPID > 0) {
+  if (InputPID > SetpointPID) {
     //caduta in avanti
     fallDirection = true;
     myQuickPID.SetControllerDirection(QuickPID::REVERSE);
-  } else if (InputPID < 0) {
+  } else if (InputPID < SetpointPID) {
     //caduta in dietro
     fallDirection = false;
     myQuickPID.SetControllerDirection(QuickPID::DIRECT);
