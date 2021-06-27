@@ -10,3 +10,5 @@ Robot che si auto-bilancia per rimanere in equilibrio
 | robot_equilibrio_Motor_Deadzone.ino | QuickPID | gestione delle differenze fra i due motori |
 
 >La versione da ritenersi migliore è: **robot_equilibrio_altra_libreria_pid.ino**
+
+![Robot Equilibrio](/img/fronte_wide.jpg "Robot Equilibrio")
