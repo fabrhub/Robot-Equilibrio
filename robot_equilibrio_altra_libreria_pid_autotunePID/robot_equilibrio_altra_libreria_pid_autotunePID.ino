@@ -161,4 +161,5 @@ void printStatus() {
   Serial.print(Ki);
   Serial.print(",Kd:");
   Serial.println(Kd);
+  Serial.println(tuning);
 }
