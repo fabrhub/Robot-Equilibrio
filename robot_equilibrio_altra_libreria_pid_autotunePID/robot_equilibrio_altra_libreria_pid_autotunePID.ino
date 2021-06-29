@@ -1,4 +1,5 @@
 #include <PID_v1.h>
+#include <PID_AutoTune_v0.h>
 #include <MPU6050_tockn.h>
 #include <Wire.h>
 
@@ -17,6 +18,14 @@ bool fallDirection; //true-avanti, false-dietro
 
 PID myPID(&InputPID, &OutputPID, &SetpointPID , Kp, Ki, Kd, DIRECT);
 
+//--
+PID_ATune aTune(&InputPID, &OutputPID);
+boolean tuning = true;
+double aTuneStep = 50, aTuneNoise = 1, aTuneStartValue = 100;
+unsigned int aTuneLookBack = 20;
+byte ATuneModeRemember = 2;
+//--
+
 void setup() {
   Serial.begin(9600);
 
@@ -33,27 +42,79 @@ void setup() {
   calibrazioneSensore();
   //mpu6050.calcGyroOffsets(true); //calibrazione (metti true come parametro se vuoi stampare lo stato)
   //SetpointPID = 0; //obiettivo target -> punto di equilibrio da cambiare in base al sensore, valore intorno allo 0
-  
+
   myPID.SetMode(AUTOMATIC);
+
+  //--
+  if (tuning) {
+    tuning = false;
+    changeAutoTune();
+    tuning = true;
+  }
+  //--
 }
 
 void loop() {
   readValueFromSensor();
-  myPID.Compute();
+  //--
+  if (tuning){
+    byte val = (aTune.Runtime()); //restituisce 1 se ha finito di fare il tuning, 0 altrimenti
+    if (val != 0){
+      tuning = false;
+    }
+    if (!tuning){ //we're done, set the tuning parameters
+      Kp = aTune.GetKp();
+      Ki = aTune.GetKi();
+      Kd = aTune.GetKd();
+      myPID.SetTunings(Kp, Ki, Kd);
+      AutoTuneHelper(false);
+    }
+  }else{
+    myPID.Compute();
+  }
+  //--
   moveMotor(OutputPID, fallDirection);
   printStatus();
 }
 
-void calibrazioneSensore(){
+//--
+void changeAutoTune() {
+  if (!tuning)
+  {
+    //Set the output to the desired starting frequency.
+    OutputPID = aTuneStartValue;
+    aTune.SetNoiseBand(aTuneNoise);
+    aTune.SetOutputStep(aTuneStep);
+    aTune.SetLookbackSec((int)aTuneLookBack);
+    AutoTuneHelper(true);
+    tuning = true;
+  }
+  else
+  { //cancel autotune
+    aTune.Cancel();
+    tuning = false;
+    AutoTuneHelper(false);
+  }
+}
+
+void AutoTuneHelper(boolean start) {
+  if (start)
+    ATuneModeRemember = myPID.GetMode();
+  else
+    myPID.SetMode(ATuneModeRemember);
+}
+//--
+
+void calibrazioneSensore() {
   Serial.println("Calibrazione, NON MUOVERE IL ROBOT");
   float somma = 0;
-  for(int i=0; i<500; i++){
+  for (int i = 0; i < 500; i++) {
     mpu6050.update();
     somma += mpu6050.getAngleY();
     Serial.println(mpu6050.getAngleY());
     delay(50); //importante
   }
-  SetpointPID = somma/500;
+  SetpointPID = somma / 500;
   Serial.println("Calibrazione finita, target impostato.");
 }
 
@@ -93,5 +154,11 @@ void printStatus() {
   Serial.print(",OutputPID:");
   Serial.print(OutputPID);
   Serial.print(",SetpointPID:");
-  Serial.println(SetpointPID);
+  Serial.print(SetpointPID);
+  Serial.print(",Kp:");
+  Serial.print(Kp);
+  Serial.print(",Ki:");
+  Serial.print(Ki);
+  Serial.print(",Kd:");
+  Serial.println(Kd);
 }
