@@ -12,7 +12,7 @@
 MPU6050 mpu6050(Wire);
 
 double SetpointPID, InputPID, OutputPID;
-double Kp = 22, Ki = 0.01, Kd = 0.4;
+double Kp = 25, Ki = 0.01, Kd = 0.4;
 bool fallDirection; //true-avanti, false-dietro
 
 PID myPID(&InputPID, &OutputPID, &SetpointPID , Kp, Ki, Kd, DIRECT);
